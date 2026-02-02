@@ -7,31 +7,30 @@ export function useIdle(timeout: number) {
         let timer: NodeJS.Timeout;
 
         const resetTimer = () => {
-            setIsIdle(false);
+            // If we are currently active, keep resetting the timer
             clearTimeout(timer);
             timer = setTimeout(() => setIsIdle(true), timeout);
         };
 
-        // Events to listen for
-        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+        // Events that count as "activity" to STAY active
+        // Notice we REMOVED mousemove and scroll to prevent accidental wakeups
+        const activityEvents = ['mousedown', 'keypress', 'touchstart'];
 
-        events.forEach(event => document.addEventListener(event, resetTimer));
+        activityEvents.forEach(event => {
+            document.addEventListener(event, resetTimer);
+        });
 
-        // Initial start
-        resetTimer();
-        // Default to true if no interaction initially?
-        // Actually typically a kiosk starts idle. But resetTimer sets it false.
-        // We want it to START true (Attract screen).
-
-        // Let's modify:
-        // If we want it to start as Idle, we shouldn't call resetTimer immediately?
-        // Or we manually set isIdle(true) initially and wait for FIRST interaction.
+        // If something else manually sets isIdle to false (like clicking the Attract screen),
+        // we need to start the timer.
+        if (!isIdle) {
+            resetTimer();
+        }
 
         return () => {
-            events.forEach(event => document.removeEventListener(event, resetTimer));
+            activityEvents.forEach(event => document.removeEventListener(event, resetTimer));
             clearTimeout(timer);
         };
-    }, [timeout]);
+    }, [timeout, isIdle]);
 
     return { isIdle, setIsIdle };
 }
