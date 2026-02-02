@@ -5,11 +5,17 @@ import { useState, useEffect } from "react";
 // import RabbitImage from "@/public/rabbit.png"; // We don't have it yet, use placeholder or CSS art
 
 export default function AttractScreen({ onStart }: { onStart: () => void }) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     return (
         <div className="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center cursor-pointer" onClick={onStart}>
             {/* Background decorations */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {[...Array(20)].map((_, i) => (
+                {mounted && [...Array(20)].map((_, i) => (
                     <motion.div
                         key={i}
                         className="absolute text-primary/20 text-4xl"
