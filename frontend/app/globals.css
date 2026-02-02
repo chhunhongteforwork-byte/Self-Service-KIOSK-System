@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FFF0F5; /* Lavender Blush (very pale pink) */
+  --foreground: #4A4A4A; /* Dark Gray text */
+  --primary: #FF69B4; /* Hot Pink */
+  --primary-foreground: #FFFFFF;
+  --secondary: #FFFFFF;
+  --secondary-foreground: #FF69B4;
+  --accent: #FF8C00; /* Dark Orange (Carrot) */
+  --accent-foreground: #FFFFFF;
+  --muted: #FFE4E1; /* Misty Rose */
+  --card: #FFFFFF;
+  --card-foreground: #4A4A4A;
+  --border: #FFB7C5;
+  --radius: 1rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; /* Cute font fallback */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --radius-lg: var(--radius);
+}
+
+/* Custom Scrollbar for hidden scroll feel */
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
