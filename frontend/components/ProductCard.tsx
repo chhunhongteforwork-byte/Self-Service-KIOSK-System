@@ -2,7 +2,7 @@
 
 import { Product } from "@/types";
 import { useCartStore } from "@/lib/store";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getFullImageUrl } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import Image from "next/image";
@@ -23,11 +23,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         >
             <div className="relative aspect-square w-full bg-muted">
                 {product.image_url ? (
-                    <Image
-                        src={product.image_url.startsWith('http') ? product.image_url : `http://localhost:8000${product.image_url}`}
+                    <img
+                        src={getFullImageUrl(product.image_url)}
                         alt={product.name}
-                        fill
-                        className="object-cover"
+                        className="w-full h-full object-cover"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground">

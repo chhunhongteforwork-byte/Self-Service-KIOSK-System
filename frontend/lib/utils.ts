@@ -13,4 +13,11 @@ export function formatCurrency(cents: number): string {
     }).format(cents / 100);
 }
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+
+export function getFullImageUrl(path: string | null | undefined): string {
+    if (!path) return "";
+    if (path.startsWith('http')) return path;
+    const base = API_BASE.replace('/api', '');
+    return `${base}${path}`;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCartStore } from "@/lib/store";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getFullImageUrl } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import Image from "next/image";
@@ -55,11 +55,10 @@ export default function CartDrawer() {
                                     <div key={item.product.id} className="flex gap-4 bg-white p-4 rounded-xl shadow-sm border border-border/50">
                                         <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                                             {item.product.image_url && (
-                                                <Image
-                                                    src={item.product.image_url.startsWith('http') ? item.product.image_url : `http://localhost:8000${item.product.image_url}`}
+                                                <img
+                                                    src={getFullImageUrl(item.product.image_url)}
                                                     alt={item.product.name}
-                                                    fill
-                                                    className="object-cover"
+                                                    className="w-full h-full object-cover"
                                                 />
                                             )}
                                         </div>

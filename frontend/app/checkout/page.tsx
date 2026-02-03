@@ -5,7 +5,7 @@ import { formatCurrency, API_BASE } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Loader2, FileText, Printer } from "lucide-react";
 import { motion } from "framer-motion";
 
 type CheckoutState = 'SUMMARY' | 'PROCESSING' | 'AWAITING_PAYMENT' | 'SUCCESS';
@@ -102,14 +102,25 @@ export default function CheckoutPage() {
                 </motion.div>
                 <h1 className="text-4xl font-bold mb-4">Payment Successful!</h1>
                 <p className="text-xl text-muted-foreground mb-8">Order #{orderNumber}</p>
-                <p className="text-lg">Please check the printer for your receipt.</p>
 
-                <button
-                    onClick={() => router.push('/')}
-                    className="mt-12 bg-primary text-white px-8 py-3 rounded-full font-bold"
-                >
-                    Start New Order
-                </button>
+                <div className="flex flex-col gap-4">
+                    <a
+                        href={`${API_BASE}/payments/orders/${orderId}/receipt`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-accent text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-lg hover:scale-105 transition-transform flex items-center justify-center gap-3"
+                    >
+                        <Printer size={24} />
+                        Get Receipt (PDF)
+                    </a>
+
+                    <button
+                        onClick={() => router.push('/')}
+                        className="mt-4 bg-primary/10 text-primary px-8 py-3 rounded-full font-bold hover:bg-primary/20 transition-colors"
+                    >
+                        Start New Order
+                    </button>
+                </div>
             </div>
         );
     }

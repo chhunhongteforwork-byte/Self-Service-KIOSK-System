@@ -2,8 +2,8 @@ import os
 import sys
 import django
 
-# Add backend to path so we can import config
-sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
+# Add current directory to path so we can import config and store
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()

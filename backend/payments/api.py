@@ -1,9 +1,11 @@
 from ninja import Router, Schema
 from typing import List
 from django.shortcuts import get_object_or_404
+from django.http import FileResponse
 from store.models import Order, OrderItem, Product
 from .models import Payment
 from .utils.aba_payway import generate_qr, check_transaction
+from .utils.receipt import generate_order_receipt_pdf
 import uuid
 
 router = Router()
@@ -131,3 +133,16 @@ def check_order_status(request, order_id: int):
         "status": val_order.status,
         "payment_status": val_order.payments.last().status if val_order.payments.exists() else 'NONE'
     }
+
+@router.get("/orders/{order_id}/receipt")
+def download_receipt(request, order_id: int):
+    buffer = generate_order_receipt_pdf(order_id)
+    if not buffer:
+        return {"error": "Order not found"}, 404
+    
+    return FileResponse(
+        buffer, 
+        as_attachment=True, 
+        filename=f"receipt_order_{order_id}.pdf",
+        content_type='application/pdf'
+    )
