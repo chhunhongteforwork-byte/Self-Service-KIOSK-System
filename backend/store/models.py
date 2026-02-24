@@ -53,3 +53,39 @@ class OrderItem(models.Model):
     @property
     def line_total(self):
         return self.quantity * self.price_at_time
+
+from django.utils import timezone
+
+class Receipt(models.Model):
+    SOURCE_CHOICES = [
+        ('REAL', 'Real'),
+        ('SIMULATED', 'Simulated'),
+    ]
+    
+    receipt_id = models.CharField(max_length=100, unique=True, db_index=True)
+    created_at = models.DateTimeField(db_index=True, default=timezone.now)
+    total_items = models.IntegerField()
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='SIMULATED', db_index=True)
+
+    def __str__(self):
+        return f"Receipt {self.receipt_id}"
+
+class ReceiptItem(models.Model):
+    receipt = models.ForeignKey(Receipt, related_name="items", on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, null=True, blank=True, on_delete=models.SET_NULL)
+    product_name_snapshot = models.CharField(max_length=255)
+    category_snapshot = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    qty = models.IntegerField()
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    line_total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.qty}x {self.product_name_snapshot} ({self.receipt.receipt_id})"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['receipt']),
+            models.Index(fields=['product']),
+            models.Index(fields=['category_snapshot']),
+        ]

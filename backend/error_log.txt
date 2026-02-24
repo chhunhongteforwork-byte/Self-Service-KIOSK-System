@@ -1,0 +1,22 @@
+Traceback (most recent call last):
+  File "C:\Users\PC\Documents\Chhunhong main\MIS masters\Semester I\1. System design\Assignment\Final research\Self-Service-KIOSK-System\backend\venv\Lib\site-packages\ninja\operation.py", line 135, in run
+    return self._result_to_response(request, result, temporal_response)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PC\Documents\Chhunhong main\MIS masters\Semester I\1. System design\Assignment\Final research\Self-Service-KIOSK-System\backend\venv\Lib\site-packages\ninja\operation.py", line 280, in _result_to_response
+    validated_object = response_model.model_validate(
+        resp_object, context={"request": request, "response_status": status}
+    )
+  File "C:\Users\PC\Documents\Chhunhong main\MIS masters\Semester I\1. System design\Assignment\Final research\Self-Service-KIOSK-System\backend\venv\Lib\site-packages\pydantic\main.py", line 716, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        obj,
+        ^^^^
+    ...<5 lines>...
+        by_name=by_name,
+        ^^^^^^^^^^^^^^^^
+    )
+    ^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for NinjaResponseSchema
+response.fitted_range.points
+  Input should be a valid string [type=string_type, input_value=31, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.12/v/string_type

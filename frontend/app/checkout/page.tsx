@@ -27,27 +27,7 @@ export default function CheckoutPage() {
         }
     }, [items, router, state]);
 
-    // Polling Logic
-    useEffect(() => {
-        if (state === 'AWAITING_PAYMENT' && orderId) {
-            const checkStatus = async () => {
-                try {
-                    const res = await fetch(`${API_BASE}/payments/orders/${orderId}/status`);
-                    const data = await res.json();
-                    if (data.status === 'PAID') {
-                        setState('SUCCESS');
-                        clearCart();
-                    }
-                } catch (e) {
-                    console.error("Polling error", e);
-                }
-            };
-
-            pollTimer.current = setInterval(checkStatus, 2000);
-
-            return () => clearInterval(pollTimer.current);
-        }
-    }, [state, orderId, clearCart]);
+    // Polling Logic removed for manual confirmation
 
     // Cleanup to attract screen after success
     useEffect(() => {
@@ -200,7 +180,7 @@ export default function CheckoutPage() {
                                         <img
                                             src={qrData.qrImage}
                                             alt="KHQR"
-                                            className="w-64 h-64 object-contain"
+                                            className="w-full h-auto max-w-[300px] object-contain rounded-xl"
                                         />
                                     ) : (
                                         <div className="w-64 h-64 bg-gray-200 flex items-center justify-center">
@@ -213,6 +193,24 @@ export default function CheckoutPage() {
                                 <div className="mt-4 text-xs text-muted-foreground">
                                     Order: {orderNumber}
                                 </div>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const res = await fetch(`${API_BASE}/payments/orders/${orderId}/mock-pay`, {
+                                                method: 'POST'
+                                            });
+                                            if (res.ok) {
+                                                setState('SUCCESS');
+                                                clearCart();
+                                            }
+                                        } catch (e) {
+                                            console.error('Mock pay error:', e);
+                                        }
+                                    }}
+                                    className="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors"
+                                >
+                                    Simulate Payment Success
+                                </button>
                             </div>
                         )}
                     </div>

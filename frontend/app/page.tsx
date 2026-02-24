@@ -8,7 +8,8 @@ import CartDrawer from "@/components/CartDrawer";
 import { useIdle } from "@/lib/useIdle";
 import { Category, Product } from "@/types";
 import { API_BASE } from "@/lib/utils";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, BarChart3 } from "lucide-react";
+import Link from "next/link";
 import { useCartStore } from "@/lib/store";
 
 export default function Home() {
@@ -61,17 +62,25 @@ export default function Home() {
           <h1 className="text-2xl font-black text-primary flex items-center gap-2">
             🐰 Rabbit Kiosk
           </h1>
-          <button
-            onClick={toggleCart}
-            className="relative bg-white p-3 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95"
-          >
-            <ShoppingBag className="text-primary" />
-            {items.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-accent text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold animate-bounce">
-                {items.reduce((a, b) => a + b.quantity, 0)}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/analytics"
+              className="relative bg-white p-3 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 text-gray-400 hover:text-primary"
+            >
+              <BarChart3 className="w-6 h-6" />
+            </Link>
+            <button
+              onClick={toggleCart}
+              className="relative bg-white p-3 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95"
+            >
+              <ShoppingBag className="w-6 h-6 text-primary" />
+              {items.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-accent text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold animate-bounce">
+                  {items.reduce((a, b) => a + b.quantity, 0)}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Categories (Sticky below header) */}

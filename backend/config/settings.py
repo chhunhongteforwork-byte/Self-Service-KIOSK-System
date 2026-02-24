@@ -70,6 +70,14 @@ DATABASES = {
     )
 }
 
+# Explicitly prevent ephemeral SQLite usage in production
+if not DEBUG and 'sqlite' in DATABASES['default'].get('ENGINE', ''):
+    raise ValueError(
+        "Production environment (DEBUG=False) requires a persistent DATABASE_URL. "
+        "Ephemeral SQLite is not allowed since it will be wiped on Railway redeploys."
+    )
+
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},

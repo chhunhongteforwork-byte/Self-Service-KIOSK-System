@@ -2,7 +2,7 @@ from ninja import Router, Schema
 from typing import List
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse
-from store.models import Order, OrderItem, Product
+from store.models import Order, OrderItem, Product, Receipt, ReceiptItem
 from .models import Payment
 from .utils.aba_payway import generate_qr, check_transaction
 from .utils.receipt import generate_order_receipt_pdf
@@ -23,16 +23,15 @@ class CheckoutResponse(Schema):
     order_number: str
     qr_data: dict # Contains qr_image url etc
     total_amount: int
+from django.conf import settings
+from django.utils import timezone
+from .utils.mock_qr import generate_mock_khqr_base64
 
 @router.post("/checkout", response=CheckoutResponse)
 def checkout(request, payload: CheckoutRequest):
     # 1. Create Order
     # Unique order number
     order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
-    
-    # Verify total and create order items
-    # In a real app, strict price checking is needed.
-    # For MVP, we trust product price from DB.
     
     order = Order.objects.create(
         order_number=order_number,
@@ -58,25 +57,36 @@ def checkout(request, payload: CheckoutRequest):
         items_for_aba.append({
             "name": product.name,
             "quantity": item.quantity,
-            "price": str(product.price / 100.0) # ABA Helper expects string float or similar? 
-            # Wait, helper logic uses format_amount.
-            # actually our aba_payway.generate_qr takes `amount` as float.
+            "price": str(product.price / 100.0) 
         })
         
     order.total_amount = calculated_total
     order.save()
     
     # 2. Call ABA Generate QR
-    # Tran ID for ABA
     tran_id = f"TRX-{order.order_number}"
     amount_usd = calculated_total / 100.0
     
-    qr_response = generate_qr(
-        amount=amount_usd,
-        currency="USD",
-        payment_option="abapay_khqr",
-        tran_id=tran_id
-    )
+    try:
+        qr_response = generate_qr(
+            amount=amount_usd,
+            currency="USD",
+            payment_option="abapay_khqr",
+            tran_id=tran_id
+        )
+    except Exception as e:
+        if settings.DEBUG:
+            print("WARNING: ABA PayWay API failed. Using beautiful mock Rabbit Cafe KHQR for local dev.")
+            
+            # Generate the dynamic base64 KHQR image matching the requested style
+            b64_img = generate_mock_khqr_base64(amount_usd, shop_name="Rabbit Cafe")
+            
+            qr_response = {
+                "hash": "mock_hash_123",
+                "qrImage": b64_img
+            }
+        else:
+            raise e
     
     # 3. Create Payment Record
     Payment.objects.create(
@@ -99,6 +109,44 @@ class OrderStatusResponse(Schema):
     status: str
     payment_status: str
 
+class SuccessResponse(Schema):
+    success: bool
+
+def sync_order_to_receipt(order: Order):
+    if Receipt.objects.filter(receipt_id=order.order_number).exists():
+        return
+        
+    receipt = Receipt.objects.create(
+        receipt_id=order.order_number,
+        total_items=sum(item.quantity for item in order.items.all()),
+        total_amount=order.total_amount,
+        source='REAL'
+    )
+    
+    for item in order.items.all():
+        ReceiptItem.objects.create(
+            receipt=receipt,
+            product=item.product,
+            product_name_snapshot=item.product.name if item.product else "Unknown Product",
+            category_snapshot=item.product.category.name if item.product and item.product.category else "Unknown",
+            qty=item.quantity,
+            unit_price=item.price_at_time,
+            line_total=item.line_total
+        )
+
+@router.post("/orders/{order_id}/mock-pay", response=SuccessResponse)
+def mock_pay_order(request, order_id: int):
+    val_order = get_object_or_404(Order, id=order_id)
+    if settings.DEBUG and val_order.status == 'PENDING':
+        payment = val_order.payments.last()
+        if payment:
+            payment.status = 'COMPLETED'
+            payment.save()
+        val_order.status = 'PAID'
+        val_order.save()
+        sync_order_to_receipt(val_order)
+    return {"success": True}
+
 @router.get("/orders/{order_id}/status", response=OrderStatusResponse)
 def check_order_status(request, order_id: int):
     val_order = get_object_or_404(Order, id=order_id)
@@ -110,23 +158,18 @@ def check_order_status(request, order_id: int):
             # Check ABA
              try:
                 res = check_transaction(payment.transaction_id)
-                # Parse response
-                # ABA sandbox output for check-transaction-2
-                # status: 0 means success/paid? Need to verify doc. 
-                # Assuming status 0000 or similar.
-                # Let's inspect res in debug or assume 'status': {'code': '00', ...}
-                
-                # For now, let's look at `aba_payway.py`:
-                # It just returns r.json(). 
-                # Typical PayWay: status.code == "00" is success.
                 code = res.get('status', {}).get('code')
-                if code == "00":
-                    payment.status = 'COMPLETED'
-                    payment.save()
-                    val_order.status = 'PAID'
-                    val_order.save()
              except Exception as e:
-                 print(f"Error checking ABA: {e}")
+                 if not settings.DEBUG:
+                     print(f"Error checking ABA: {e}")
+                 code = "99" # Keep as pending unless ABA says otherwise or manual mock-pay is triggered
+                     
+             if code == "00":
+                 payment.status = 'COMPLETED'
+                 payment.save()
+                 val_order.status = 'PAID'
+                 val_order.save()
+                 sync_order_to_receipt(val_order)
                  
     return {
         "order_id": val_order.id,

@@ -1,1 +1,1 @@
-web: python manage.py migrate --noinput && python create_admin.py && python seed_data.py && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --log-file -
+web: python manage.py migrate --noinput && python create_admin.py && if [ "$SEED_DEMO_DATA" = "true" ] || [ "$SEED_DEMO_DATA" = "TRUE" ]; then python seed_data.py; else echo "Skipping seed demo data"; fi && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --log-file -
