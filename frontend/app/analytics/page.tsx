@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Area
+    LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 import { Calendar, DollarSign, ShoppingBag, TrendingUp, Package, Download, Lock, BrainCircuit, Activity, Clock, BarChart3, Filter } from 'lucide-react';
 import { API_BASE, formatCurrency, cn } from '@/lib/utils';
@@ -55,8 +55,8 @@ export default function AnalyticsDashboard() {
     // --- Metadata Initial Load ---
     useEffect(() => {
         if (!isAuthenticated) return;
-        fetch(`${API_BASE}/categories`).then(r => r.json()).then(setCategories).catch(console.error);
-        fetch(`${API_BASE}/products`).then(r => r.json()).then(setProducts).catch(console.error);
+        fetch(`${API_BASE}/store/categories`).then(r => r.json()).then(setCategories).catch(console.error);
+        fetch(`${API_BASE}/store/products`).then(r => r.json()).then(setProducts).catch(console.error);
     }, [isAuthenticated]);
 
     // --- Computed Previous Dates ---
@@ -208,6 +208,16 @@ export default function AnalyticsDashboard() {
         return result;
     }, [currData, fcastResult]);
 
+    const categoryChartData = useMemo(() => {
+        if (!currData || !currData.breakdown || !currData.breakdown.category_tot) return [];
+        return Object.entries(currData.breakdown.category_tot).map(([name, value]) => ({
+            name,
+            value
+        })).sort((a: any, b: any) => b.value - a.value);
+    }, [currData]);
+
+    const COLORS = ['#111827', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'];
+
     // 1) Render PIN Gate
     if (!isAuthenticated) {
         return (
@@ -270,6 +280,7 @@ export default function AnalyticsDashboard() {
                         <select className="bg-gray-50 border border-border text-sm font-medium rounded-xl p-2.5 outline-none" value={metric} onChange={(e) => setMetric(e.target.value)}>
                             <option value="revenue">Revenue Data</option>
                             <option value="orders">Orders Data</option>
+                            <option value="quantity">Demand (Quantity)</option>
                         </select>
                         <select className="bg-gray-50 border border-border text-sm font-medium rounded-xl p-2.5 outline-none" value={freq} onChange={(e) => setFreq(e.target.value)}>
                             <option value="H">Hourly View</option>
@@ -322,10 +333,10 @@ export default function AnalyticsDashboard() {
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         {/* KPI Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <KpiCard title={`Total ${metric === 'revenue' ? 'Revenue' : 'Orders'}`}
+                            <KpiCard title={`Total ${metric === 'revenue' ? 'Revenue' : metric === 'orders' ? 'Orders' : 'Items Sold'}`}
                                 value={valFormatter(currData.summary.total)}
                                 prevValue={isComparing && prevData ? valFormatter(prevData.summary.total) : undefined}
-                                icon={metric === 'revenue' ? <DollarSign className="w-6 h-6 text-green-600" /> : <ShoppingBag className="w-6 h-6 text-blue-600" />} />
+                                icon={metric === 'revenue' ? <DollarSign className="w-6 h-6 text-green-600" /> : metric === 'orders' ? <ShoppingBag className="w-6 h-6 text-blue-600" /> : <Package className="w-6 h-6 text-indigo-600" />} />
 
                             <KpiCard title={`Average / ${freq === 'D' ? 'Day' : freq === 'H' ? 'Hour' : 'Week'}`}
                                 value={valFormatter(currData.summary.avg)}
@@ -344,24 +355,68 @@ export default function AnalyticsDashboard() {
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {/* Main TimeSeries Chart */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-border lg:col-span-2 flex flex-col min-h-[400px]">
-                                <h3 className="text-sm font-semibold mb-6 font-serif">Main Timeseries Trend</h3>
-                                <div className="flex-1 w-full min-h-[300px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={tsChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} minTickGap={30} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} tickFormatter={valFormatter} />
-                                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(val: any) => [valFormatter(val), '']} />
-                                            <Legend verticalAlign="top" height={36} />
-                                            <Line type="monotone" dataKey="Current" stroke="#000000" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#000000' }} />
-                                            {isComparing && (
-                                                <Line type="monotone" dataKey="Previous" stroke="#9CA3AF" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                                            )}
-                                        </LineChart>
-                                    </ResponsiveContainer>
+                            <div className="lg:col-span-2 flex flex-col gap-6">
+                                {/* Main TimeSeries Chart */}
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-border flex flex-col min-h-[400px]">
+                                    <h3 className="text-sm font-semibold mb-6 font-serif">Main Timeseries Trend</h3>
+                                    <div className="flex-1 w-full flex min-h-[300px]">
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <LineChart data={tsChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} minTickGap={30} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} tickFormatter={valFormatter} />
+                                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(val: any) => [valFormatter(val), '']} />
+                                                <Legend verticalAlign="top" height={36} />
+                                                <Line type="monotone" dataKey="Current" stroke="#000000" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#000000' }} />
+                                                {isComparing && (
+                                                    <Line type="monotone" dataKey="Previous" stroke="#9CA3AF" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                                                )}
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
+
+                                {/* New Donut Chart inside left column */}
+                                {!isComparing && currData.breakdown && categoryChartData.length > 0 && (
+                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-border h-72 flex flex-col">
+                                        <h3 className="text-sm font-semibold flex items-center gap-2 font-serif mb-2">
+                                            <Package className="w-4 h-4 text-gray-400" /> Category Breakdown
+                                        </h3>
+                                        <div className="flex-1 w-full flex min-h-[220px] items-center">
+                                            <div className="w-1/2 h-full">
+                                                <ResponsiveContainer width="100%" height={220}>
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={categoryChartData}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={60}
+                                                            outerRadius={80}
+                                                            paddingAngle={2}
+                                                            dataKey="value"
+                                                        >
+                                                            {categoryChartData.map((entry: any, index: number) => (
+                                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(val: any) => [valFormatter(val), '']} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                            <div className="w-1/2 h-full flex flex-col justify-center gap-2 overflow-y-auto pr-2">
+                                                {categoryChartData.map((entry: any, index: number) => (
+                                                    <div key={index} className="flex items-center justify-between text-sm">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                                            <span className="text-gray-600 truncate max-w-[100px]" title={entry.name}>{entry.name}</span>
+                                                        </div>
+                                                        <span className="font-semibold text-gray-900">{valFormatter(entry.value)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Top Products Table */}
@@ -498,8 +553,8 @@ export default function AnalyticsDashboard() {
                                             Trained on {fcastResult.fitted_range.points} points ({fcastResult.fitted_range.start.split(' ')[0]} - {fcastResult.fitted_range.end.split(' ')[0]})
                                         </span>
                                     </div>
-                                    <div className="flex-1 w-full min-h-[400px]">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                    <div className="flex-1 w-full flex min-h-[400px]">
+                                        <ResponsiveContainer width="100%" height={400}>
                                             <ComposedChart data={forecastChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                                                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} minTickGap={40} />

@@ -168,6 +168,7 @@ class TimeSeriesSummary(Schema):
 class TimeSeriesBreakdown(Schema):
     weekday_avg: dict
     hour_avg: dict
+    category_tot: dict = {}
 
 class TimeSeriesResponse(Schema):
     series: List[TimeSeriesPoint]
@@ -196,6 +197,10 @@ def get_timeseries(
             
         date_field = 'receipt__created_at'
         revenue_field = 'line_total'
+    elif metric == 'quantity':
+        qs = ReceiptItem.objects.filter(receipt__created_at__range=(start_date, end_date))
+        date_field = 'receipt__created_at'
+        revenue_field = 'line_total' # Unused for quantity, but kept for consistency
     else:
         qs = Receipt.objects.filter(created_at__range=(start_date, end_date))
         date_field = 'created_at'
@@ -214,6 +219,8 @@ def get_timeseries(
             agg_expr = Count('receipt', distinct=True)
         else:
             agg_expr = Count('id')
+    elif metric == 'quantity':
+        agg_expr = Sum('qty')
     else:
         agg_expr = Sum(revenue_field)
 
@@ -258,8 +265,8 @@ def get_timeseries(
     else:
         summary = {"total": 0.0, "avg": 0.0, "min": 0.0, "max": 0.0}
 
-    # 5. Breakdown (Weekday & Hour of day)
-    breakdown = {"weekday_avg": {}, "hour_avg": {}}
+    # 5. Breakdown (Weekday & Hour of day, Category)
+    breakdown = {"weekday_avg": {}, "hour_avg": {}, "category_tot": {}}
     
     unique_days = max((end_date - start_date).days, 1)
     weeks_count = max(unique_days / 7.0, 1.0)
@@ -296,6 +303,28 @@ def get_timeseries(
             if metric == 'revenue':
                 val *= 100
             breakdown["weekday_avg"][wd_map[wd_val]] = round(val / weeks_count, 2)
+
+    # Category aggregation
+    cat_base_qs = ReceiptItem.objects.filter(receipt__created_at__range=(start_date, end_date))
+    
+    if metric == 'orders':
+        cat_agg_expr = Count('receipt', distinct=True)
+    elif metric == 'quantity':
+        cat_agg_expr = Sum('qty')
+    else:
+        cat_agg_expr = Sum('line_total')
+        
+    cat_qs = (
+        cat_base_qs.values('product__category__name')
+          .annotate(y=cat_agg_expr)
+    )
+    for item in cat_qs:
+        cat_name = item['product__category__name']
+        if cat_name is not None:
+            val = float(item['y'] or 0)
+            if metric == 'revenue':
+                val *= 100
+            breakdown["category_tot"][cat_name] = round(val, 2)
 
     return {
         "series": series_data,

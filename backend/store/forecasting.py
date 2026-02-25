@@ -42,6 +42,11 @@ def load_series(metric='revenue', freq='D', start=None, end=None, filters=None):
             qs = qs.filter(product_id=filters['product_id'])
         date_field = 'receipt__created_at'
         revenue_field = 'line_total'
+    elif metric == 'quantity':
+        # Even without filters, we need ReceiptItem to sum quantities of individual items
+        qs = ReceiptItem.objects.filter(receipt__created_at__range=(start_date, end_date))
+        date_field = 'receipt__created_at'
+        revenue_field = 'line_total'  # Unused for quantity, but kept for consistency
     else:
         qs = Receipt.objects.filter(created_at__range=(start_date, end_date))
         date_field = 'created_at'
@@ -62,6 +67,8 @@ def load_series(metric='revenue', freq='D', start=None, end=None, filters=None):
             agg_expr = Count('receipt', distinct=True)
         else:
             agg_expr = Count('id')
+    elif metric == 'quantity':
+        agg_expr = Sum('qty')
     else:
         agg_expr = Sum(revenue_field)
 

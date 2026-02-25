@@ -14,7 +14,7 @@ class CVSchema(Schema):
     step: int = 7
 
 class ForecastRequest(Schema):
-    metric: str = "revenue"
+    metric: str = "revenue" # "revenue", "orders", "quantity"
     freq: str = "D"
     horizon: int = 14
     model: str = "sklearn" # "arima", "sklearn", "xgboost"
