@@ -119,7 +119,7 @@ def sync_order_to_receipt(order: Order):
     receipt = Receipt.objects.create(
         receipt_id=order.order_number,
         total_items=sum(item.quantity for item in order.items.all()),
-        total_amount=order.total_amount,
+        total_amount=order.total_amount / 100.0,
         source='REAL'
     )
     
@@ -130,8 +130,8 @@ def sync_order_to_receipt(order: Order):
             product_name_snapshot=item.product.name if item.product else "Unknown Product",
             category_snapshot=item.product.category.name if item.product and item.product.category else "Unknown",
             qty=item.quantity,
-            unit_price=item.price_at_time,
-            line_total=item.line_total
+            unit_price=item.price_at_time / 100.0,
+            line_total=item.line_total / 100.0
         )
 
 @router.post("/orders/{order_id}/mock-pay", response=SuccessResponse)
